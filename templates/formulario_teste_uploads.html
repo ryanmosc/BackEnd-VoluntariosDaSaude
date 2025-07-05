@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Gerenciar Eventos</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h2,
+        h3 {
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="file"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        button {
+            padding: 10px;
+            background-color: #3b82f6;
+            color: white;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2563eb;
+        }
+
+        #eventos-lista {
+            margin: 20px 0;
+        }
+
+        #eventos-lista div {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #eventos-lista img {
+            max-width: 100px;
+            border-radius: 8px;
+            margin-left: 10px;
+        }
+
+        #response {
+            margin-top: 20px;
+            color: #444;
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Gerenciar Eventos</h2>
+
+        <!-- Lista de Eventos -->
+        <h3>Eventos Cadastrados</h3>
+        <div id="eventos-lista"></div>
+
+        <!-- Formulário para Adicionar -->
+        <h3>Adicionar Evento</h3>
+        <form id="addForm" enctype="multipart/form-data">
+            <input type="text" name="texto" placeholder="Descrição do evento" required>
+            <input type="file" name="imagem" accept="image/*" required>
+            <button type="submit">Adicionar</button>
+        </form>
+
+        <!-- Formulário para Atualizar -->
+        <h3>Atualizar Evento</h3>
+        <form id="updateForm" enctype="multipart/form-data">
+            <input type="number" name="id" placeholder="ID do evento" required>
+            <input type="text" name="texto" placeholder="Nova descrição" required>
+            <input type="file" name="imagem" accept="image/*">
+            <button type="submit">Atualizar</button>
+        </form>
+
+        <!-- Formulário para Deletar -->
+        <h3>Deletar Evento</h3>
+        <form id="deleteForm">
+            <input type="number" name="id" placeholder="ID do evento" required>
+            <button type="submit">Deletar</button>
+        </form>
+
+        <div id="response"></div>
+    </div>
+
+    <script>
+        async function fetchApi(url, method, data) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login';
+                return { error: 'Token não encontrado' };
+            }
+
+            const headers = {
+                'Authorization': `Bearer ${token}`
+            };
+            if (!(data instanceof FormData)) {
+                headers['Content-Type'] = 'application/json';
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: headers,
+                    body: data instanceof FormData ? data : (data ? JSON.stringify(data) : null)
+                });
+
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return { error: 'Acesso não autorizado' };
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                window.location.href = '/login';
+                return { error: 'Erro na requisição' };
+            }
+        }
+
+        async function loadEventos() {
+            const response = await fetchApi('/api/eventos', 'GET');
+            const eventosLista = document.getElementById('eventos-lista');
+            if (response.error) {
+                eventosLista.innerHTML = `<p>${response.error}</p>`;
+            } else {
+                eventosLista.innerHTML = response.map(evento => `
+                    <div>
+                        <span>ID: ${evento.id} - ${evento.texto}</span>
+                        <img src="${evento.imagem}" alt="${evento.texto}">
+                    </div>
+                `).join('');
+            }
+        }
+
+        document.getElementById('addForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const response = await fetchApi('/api/eventos', 'POST', formData);
+            document.getElementById('response').innerText = JSON.stringify(response, null, 2);
+            loadEventos();
+        });
+
+        document.getElementById('updateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const id = formData.get('id');
+            const response = await fetchApi(`/api/eventos/${id}`, 'PUT', formData);
+            document.getElementById('response').innerText = JSON.stringify(response, null, 2);
+            loadEventos();
+        });
+
+        document.getElementById('deleteForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const id = formData.get('id');
+            const response = await fetchApi(`/api/eventos/${id}`, 'DELETE');
+            document.getElementById('response').innerText = JSON.stringify(response, null, 2);
+            loadEventos();
+        });
+
+        window.onload = loadEventos;
+    </script>
+</body>
+
+</html>

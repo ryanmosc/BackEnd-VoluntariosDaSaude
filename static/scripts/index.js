@@ -152,11 +152,53 @@ async function loadEventos() {
     eventoConteudo.innerHTML = eventosLimitados.map(evento => `
       <div class="evento-card"><img src="${evento.imagem}" alt="${evento.texto}"></div>
     `).join('');
-    
+
     animateEventos();
-  
+
     ScrollTrigger.refresh();
   }
 }
 
 window.onload = loadEventos;
+
+
+
+async function carregarAtualizacoes() {
+  try {
+    const response = await fetch("/api/atualizacao");
+    const dados = await response.json();
+
+    const container = document.querySelector(".cards-atualizacoes");
+    container.innerHTML = "";
+
+    if (!Array.isArray(dados)) {
+      container.innerHTML = "<p>Erro ao carregar atualizações.</p>";
+      return;
+    }
+
+    dados.forEach(att => {
+      const card = document.createElement("a");
+      card.href = "https://www.instagram.com/voluntariosdasaude36/";
+      card.target = "_blank";
+      card.rel = "noopener noreferrer";
+      card.classList.add("card-link-wrapper");
+
+      card.innerHTML = `
+          <div class="card-atualizacao">
+            <img src="${att.imagem}" alt="Atualização">
+            <p>${att.texto}</p>
+          </div>
+        `;
+
+      container.appendChild(card);
+    });
+  } catch (error) {
+    console.error("Erro ao buscar atualizações:", error);
+    document.querySelector(".cards-atualizacoes").innerHTML = "<p>Erro ao carregar atualizações.</p>";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  carregarAtualizacoes();
+});
+
